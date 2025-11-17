@@ -24,6 +24,8 @@ import type {
   EventDropArg,
 } from "@fullcalendar/core/index.js";
 
+import { Select, MenuItem, FormControl, InputLabel } from "@mui/material";
+
 import "../profileCalendar.scss";
 
 import dayjs from "dayjs";
@@ -104,13 +106,11 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
   }, []);
 
   const getEventColors = useCallback(
-    (staffId: string, shiftId: string) => {
-      const staffSeed = getStringHash(staffId);
-      const shiftSeed = getStringHash(shiftId);
-
-      const hue = (staffSeed + shiftSeed) % 360;
-      const saturation = 60 + (shiftSeed % 20);
-      const lightness = 45 + (staffSeed % 15);
+    (staffId: string) => {
+      const seed = getStringHash(staffId);
+      const hue = seed % 360;
+      const saturation = 70;
+      const lightness = 45 + (seed % 10);
 
       const background = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
       const border = `hsl(${hue}, ${Math.min(
@@ -192,7 +192,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       const endDate = dayjs.utc(assignment.shiftEnd).toDate();
       const formattedDate = dayjs(startDate).format("YYYY-MM-DD");
       const isValidDate = validDateSet.has(formattedDate);
-      const colors = getEventColors(assignment.staffId, assignment.shiftId);
+      const colors = getEventColors(assignment.staffId);
 
       return {
         id: assignment.id,
@@ -402,35 +402,52 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     );
   };
 
+  const getStaffColor = useCallback(
+    (staffId: string) => {
+      const colors = getEventColors(staffId);
+      return colors?.background;
+    },
+    [getEventColors]
+  );
+
   return (
     <div className="calendar-section">
       <div className="calendar-wrapper">
         <div className="staff-list">
-          {schedule?.staffs?.map((staff: any) => (
-            <div
-              key={staff.id}
-              onClick={() => setSelectedStaffId(staff.id)}
-              className={`staff ${
-                staff.id === selectedStaffId ? "active" : ""
-              }`}
+          <FormControl fullWidth variant="outlined" size="small">
+            <InputLabel id="staff-select-label">Personel Seçin</InputLabel>
+            <Select
+              labelId="staff-select-label"
+              id="staff-select"
+              value={selectedStaffId || ""}
+              label="Personel Seçin"
+              onChange={(e) => setSelectedStaffId(e.target.value)}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                height="20px"
-                viewBox="0 -960 960 960"
-                width="20px"
-              >
-                <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17-62.5t47-43.5q60-30 124.5-46T480-440q67 0 131.5 16T736-378q30 15 47 43.5t17 62.5v112H160Zm320-400q33 0 56.5-23.5T560-640q0-33-23.5-56.5T480-720q-33 0-56.5 23.5T400-640q0 33 23.5 56.5T480-560Zm160 228v92h80v-32q0-11-5-20t-15-14q-14-8-29.5-14.5T640-332Zm-240-21v53h160v-53q-20-4-40-5.5t-40-1.5q-20 0-40 1.5t-40 5.5ZM240-240h80v-92q-15 5-30.5 11.5T260-306q-10 5-15 14t-5 20v32Zm400 0H320h320ZM480-640Z" />
-              </svg>
-              <span>{staff.name}</span>
-            </div>
-          ))}
+              {schedule?.staffs?.map((staff: any) => (
+                <MenuItem key={staff.id} value={staff.id}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span 
+                      style={{ 
+                        display: 'inline-block',
+                        width: '16px', 
+                        height: '16px', 
+                        borderRadius: '3px',
+                        backgroundColor: getStaffColor(staff.id),
+                        border: '1px solid rgba(0,0,0,0.1)'
+                      }}
+                    />
+                    <span>{staff.name}</span>
+                  </span>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </div>
         <FullCalendar
           ref={calendarRef}
           locale={auth.language}
           plugins={getPlugins()}
-          contentHeight={400}
+          contentHeight={500}
           handleWindowResize={true}
           selectable={true}
           editable={true}

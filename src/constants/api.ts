@@ -972,9 +972,9 @@ export const profileResponse = {
   code: 200,
   data: {
     id: "05a8c62b-f5df-489c-8dc8-2914ad80c596",
-    name: "Jane Doe",
+    name: "Oğuzhan Karabacak",
     phoneNumber: "+555-55-55",
-    email: "react.candidate@gmail.com",
+    email: "krbckoguzhan@gmail.com",
     tokenExpirationDate: "2025-03-26T12:26:30.785Z",
     isVerified: true,
     organizationId: "36f0b38c-4be7-4ed3-b2ee-c866bbd48ede",
