@@ -111,21 +111,65 @@
   .calendar-modal {
     background: #2d2d2d;
     
-    h3 {
-      color: #e0e0e0;
+    .calendar-modal__header {
+      background: linear-gradient(135deg, #3D5FCC 0%, #8B3DCC 100%);
     }
 
-    .calendar-modal__info p {
-      color: #b0b0b0;
+    .calendar-modal__body {
+      background: #2d2d2d;
+    }
 
-      strong {
-        color: #e0e0e0;
+    .calendar-modal__info-item {
+      background: #3d3d3d;
+
+      &:hover {
+        background: #454545;
       }
+
+      .info-content {
+        .info-label {
+          color: #94a3b8;
+        }
+
+        .info-value {
+          color: #e0e0e0;
+        }
+      }
+
+      &.person {
+        background: #2d2d4d;
+      }
+
+      &.date {
+        background: #1f3d3d;
+      }
+
+      &.start-time {
+        background: #3d2d1f;
+      }
+
+      &.end-time {
+        background: #3d1f2d;
+      }
+
+      &.rule {
+        background: #2d1f3d;
+      }
+    }
+
+    .calendar-modal__footer {
+      background: #2d2d2d;
+      color: #64748b;
+      border-top-color: #3d3d3d;
     }
   }
 
   .calendar-modal__close {
-    color: #b0b0b0;
+    background: rgba(255, 255, 255, 0.15);
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
   }
 
   .fc {
@@ -601,44 +645,151 @@
 
 .calendar-modal {
   position: relative;
-  width: min(360px, 100%);
+  width: min(420px, 100%);
   background: #ffffff;
-  border-radius: 12px;
-  padding: 24px 20px 20px;
+  border-radius: 16px;
+  overflow: hidden;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.35);
 
-  h3 {
-    margin: 0 0 12px;
-    font-size: 18px;
-    color: #0f172a;
-  }
+  .calendar-modal__header {
+    background: linear-gradient(135deg, #4F7FFF 0%, #B24FFF 100%);
+    padding: 24px 20px;
+    color: white;
 
-  .calendar-modal__info {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    h3 {
+      margin: 0 0 4px;
+      font-size: 24px;
+      font-weight: 600;
+      color: white;
+    }
 
     p {
       margin: 0;
       font-size: 14px;
-      color: #475569;
+      opacity: 0.9;
+      color: white;
+    }
+  }
 
-      strong {
+  .calendar-modal__body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .calendar-modal__info-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    background: #f8f9fa;
+    transition: background 0.2s ease;
+
+    &:hover {
+      background: #f1f3f5;
+    }
+
+    .info-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 20px;
+    }
+
+    .info-content {
+      flex: 1;
+
+      .info-label {
+        font-size: 12px;
+        color: #64748b;
+        margin: 0 0 4px;
+        font-weight: 500;
+      }
+
+      .info-value {
+        font-size: 16px;
         color: #0f172a;
+        margin: 0;
         font-weight: 600;
       }
     }
+
+    &.person {
+      background: #e8e9ff;
+      .info-icon {
+        background: linear-gradient(135deg, #6B7FFF 0%, #8B6FFF 100%);
+        color: white;
+      }
+    }
+
+    &.date {
+      background: #e0f7f7;
+      .info-icon {
+        background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%);
+        color: white;
+      }
+    }
+
+    &.start-time {
+      background: #fff4e6;
+      .info-icon {
+        background: linear-gradient(135deg, #FB923C 0%, #F97316 100%);
+        color: white;
+      }
+    }
+
+    &.end-time {
+      background: #ffe6f0;
+      .info-icon {
+        background: linear-gradient(135deg, #EC4899 0%, #DB2777 100%);
+        color: white;
+      }
+    }
+
+    &.rule {
+      background: #f3e8ff;
+      .info-icon {
+        background: linear-gradient(135deg, #A855F7 0%, #9333EA 100%);
+        color: white;
+      }
+    }
+  }
+
+  .calendar-modal__footer {
+    padding: 16px 20px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+    border-top: 1px solid #e2e8f0;
   }
 }
 
 .calendar-modal__close {
   position: absolute;
-  top: 8px;
-  right: 10px;
+  top: 16px;
+  right: 16px;
   border: none;
-  background: transparent;
-  font-size: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 20px;
   cursor: pointer;
-  color: #475569;
+  color: white;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+  z-index: 1;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
 }

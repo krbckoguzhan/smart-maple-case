@@ -358,6 +358,15 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
   }) => {
     if (!eventDetails) return null;
 
+    const calculateDuration = () => {
+      const start = dayjs(`2000-01-01 ${eventDetails.startTime}`);
+      const end = dayjs(`2000-01-01 ${eventDetails.endTime}`);
+      const diff = end.diff(start, 'minute');
+      const hours = Math.floor(diff / 60);
+      const minutes = diff % 60;
+      return `${hours} saat ${minutes > 0 ? `${minutes} dakika` : ''}`;
+    };
+
     return (
       <div
         className="calendar-modal-overlay"
@@ -377,25 +386,58 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           >
             ×
           </button>
-          <h3>{eventDetails.shiftName}</h3>
-          <div className="calendar-modal__info">
-            <p>
-              <strong>Personel:</strong> {eventDetails.staffName}
-            </p>
-            <p>
-              <strong>Tarih:</strong> {eventDetails.date}
-            </p>
-            <p>
-              <strong>Başlangıç:</strong> {eventDetails.startTime}
-            </p>
-            <p>
-              <strong>Bitiş:</strong> {eventDetails.endTime}
-            </p>
-            {eventDetails.shiftRule ? (
-              <p>
-                <strong>Kural:</strong> {eventDetails.shiftRule}
-              </p>
-            ) : null}
+          
+          <div className="calendar-modal__header">
+            <h3>{eventDetails.shiftName}</h3>
+            <p>Vardiya Detayları</p>
+          </div>
+
+          <div className="calendar-modal__body">
+            <div className="calendar-modal__info-item person">
+              <div className="info-icon">👤</div>
+              <div className="info-content">
+                <p className="info-label">Personel</p>
+                <p className="info-value">{eventDetails.staffName}</p>
+              </div>
+            </div>
+
+            <div className="calendar-modal__info-item date">
+              <div className="info-icon">📅</div>
+              <div className="info-content">
+                <p className="info-label">Tarih</p>
+                <p className="info-value">{eventDetails.date}</p>
+              </div>
+            </div>
+
+            <div className="calendar-modal__info-item start-time">
+              <div className="info-icon">🕐</div>
+              <div className="info-content">
+                <p className="info-label">Başlangıç</p>
+                <p className="info-value">{eventDetails.startTime}</p>
+              </div>
+            </div>
+
+            <div className="calendar-modal__info-item end-time">
+              <div className="info-icon">🕐</div>
+              <div className="info-content">
+                <p className="info-label">Bitiş</p>
+                <p className="info-value">{eventDetails.endTime}</p>
+              </div>
+            </div>
+
+            {eventDetails.shiftRule && (
+              <div className="calendar-modal__info-item rule">
+                <div className="info-icon">🛡️</div>
+                <div className="info-content">
+                  <p className="info-label">Kural</p>
+                  <p className="info-value">{eventDetails.shiftRule}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="calendar-modal__footer">
+            Toplam Süre: {calculateDuration()}
           </div>
         </div>
       </div>
