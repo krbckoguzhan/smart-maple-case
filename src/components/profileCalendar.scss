@@ -36,6 +36,25 @@
   margin: 0 0 8px;
 }
 
+  .profile-details {
+     display: grid;
+  }
+
+  .profile-details p {
+          display: flex;
+          margin-bottom: auto;
+  }
+
+  .profile-info-img {
+    display: grid;
+  }
+
+   .profile-info-img p {
+      display: flex;
+      justify-content: center;
+      margin: 0px;
+  }
+
 .theme-toggle {
   background: none;
   border: none;
@@ -64,6 +83,25 @@
   .profile-details h2,
   .profile-details p {
     color: #e0e0e0;
+  }
+
+  .profile-details {
+     display: grid;
+  }
+
+  .profile-details p {
+          display: flex;
+          margin-bottom: auto;
+  }
+
+  .profile-info-img {
+    display: grid;
+  }
+
+   .profile-info-img p {
+      display: flex;
+      justify-content: center;
+      margin: 0px;
   }
   
   .theme-toggle:hover {
