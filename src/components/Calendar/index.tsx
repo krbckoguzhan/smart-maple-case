@@ -2,7 +2,7 @@
 /* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ScheduleInstance } from "../../models/schedule";
 import type { UserInstance } from "../../models/user";
@@ -12,7 +12,11 @@ import FullCalendar from "@fullcalendar/react";
 import interactionPlugin from "@fullcalendar/interaction";
 import dayGridPlugin from "@fullcalendar/daygrid";
 
-import type { EventInput } from "@fullcalendar/core/index.js";
+import type {
+  EventClickArg,
+  EventContentArg,
+  EventInput,
+} from "@fullcalendar/core/index.js";
 
 import "../profileCalendar.scss";
 
@@ -28,6 +32,16 @@ type CalendarContainerProps = {
   auth: UserInstance;
 };
 
+type CalendarEventDetails = {
+  id: string;
+  staffName: string;
+  shiftName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  shiftRule?: string;
+};
+
 const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
   const calendarRef = useRef<FullCalendar>(null);
 
@@ -37,6 +51,59 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
   const [initialDate, setInitialDate] = useState<Date>(
     dayjs(schedule?.scheduleStartDate).toDate()
   );
+  const [activeEventDetails, setActiveEventDetails] =
+    useState<CalendarEventDetails | null>(null);
+
+  const validDateList = useMemo(() => {
+    if (!schedule?.scheduleStartDate || !schedule?.scheduleEndDate) return [];
+
+    const dates: string[] = [];
+    let currentDate = dayjs(schedule.scheduleStartDate);
+    const endDate = dayjs(schedule.scheduleEndDate);
+
+    while (currentDate.isSame(endDate) || currentDate.isBefore(endDate)) {
+      dates.push(currentDate.format("YYYY-MM-DD"));
+      currentDate = currentDate.add(1, "day");
+    }
+
+    return dates;
+  }, [schedule?.scheduleStartDate, schedule?.scheduleEndDate]);
+
+  const validDateSet = useMemo(() => new Set(validDateList), [validDateList]);
+
+  const getStringHash = useCallback((value: string) => {
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) {
+      hash = (hash << 5) - hash + value.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  }, []);
+
+  const getEventColors = useCallback(
+    (staffId: string, shiftId: string) => {
+      const staffSeed = getStringHash(staffId);
+      const shiftSeed = getStringHash(shiftId);
+
+      const hue = (staffSeed + shiftSeed) % 360;
+      const saturation = 60 + (shiftSeed % 20);
+      const lightness = 45 + (staffSeed % 15);
+
+      const background = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+      const border = `hsl(${hue}, ${Math.min(
+        saturation + 10,
+        85
+      )}%, ${Math.max(lightness - 12, 30)}%)`;
+      const text = lightness > 60 ? "#0f172a" : "#ffffff";
+
+      return {
+        background,
+        border,
+        text,
+      };
+    },
+    [getStringHash]
+  );
 
   const getPlugins = () => {
     const plugins = [dayGridPlugin];
@@ -45,103 +112,171 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     return plugins;
   };
 
-  const getShiftById = (id: string) => {
-    return schedule?.shifts?.find((shift: { id: string }) => id === shift.id);
-  };
+  useEffect(() => {
+    if (!schedule?.staffs?.length) return;
 
-  const getAssigmentById = (id: string) => {
-    return schedule?.assignments?.find((assign) => id === assign.id);
-  };
+    setInitialDate(dayjs(schedule.scheduleStartDate).toDate());
+  }, [schedule?.scheduleStartDate, schedule?.staffs?.length]);
 
-  const validDates = () => {
-    const dates = [];
-    let currentDate = dayjs(schedule.scheduleStartDate);
-    while (
-      currentDate.isBefore(schedule.scheduleEndDate) ||
-      currentDate.isSame(schedule.scheduleEndDate)
-    ) {
-      dates.push(currentDate.format("YYYY-MM-DD"));
-      currentDate = currentDate.add(1, "day");
-    }
+  useEffect(() => {
+    if (!schedule?.staffs?.length) return;
 
-    return dates;
-  };
-
-  const getDatesBetween = (startDate: string, endDate: string) => {
-    const dates = [];
-    const start = dayjs(startDate, "DD.MM.YYYY").toDate();
-    const end = dayjs(endDate, "DD.MM.YYYY").toDate();
-    const current = new Date(start);
-
-    while (current <= end) {
-      dates.push(dayjs(current).format("DD-MM-YYYY"));
-      current.setDate(current.getDate() + 1);
-    }
-
-    return dates;
-  };
-
-  const generateStaffBasedCalendar = () => {
-    const works: EventInput[] = [];
-
-    const filteredAssignments = schedule?.assignments?.filter(
-      (assign) => assign.staffId === selectedStaffId
-    ) || [];
-
-    for (let i = 0; i < filteredAssignments.length; i++) {
-      const assignmentDate = dayjs
-        .utc(filteredAssignments[i]?.shiftStart)
-        .format("YYYY-MM-DD");
-      const isValidDate = validDates().includes(assignmentDate);
-
-      const work = {
-        id: filteredAssignments[i]?.id,
-        title: getShiftById(filteredAssignments[i]?.shiftId)?.name,
-        duration: "01:00",
-        date: assignmentDate,
-        staffId: filteredAssignments[i]?.staffId,
-        shiftId: filteredAssignments[i]?.shiftId,
-        className: `event ${
-          getAssigmentById(filteredAssignments[i]?.id)?.isUpdated
-            ? "highlight"
-            : ""
-        } ${!isValidDate ? "invalid-date" : ""}`,
-      };
-      works.push(work);
-    }
-
-    const offDays = schedule?.staffs?.find(
+    const firstStaffId = schedule.staffs[0].id;
+    const selectedExists = schedule.staffs.some(
       (staff) => staff.id === selectedStaffId
-    )?.offDays;
-    const dates = getDatesBetween(
-      dayjs(schedule.scheduleStartDate).format("DD.MM.YYYY"),
-      dayjs(schedule.scheduleEndDate).format("DD.MM.YYYY")
     );
-    let highlightedDates: string[] = [];
 
-    dates.forEach((date) => {
-      const transformedDate = dayjs(date, "DD-MM-YYYY").format("DD.MM.YYYY");
-      if (offDays?.includes(transformedDate)) highlightedDates.push(date);
+    if (!selectedStaffId || !selectedExists) {
+      setSelectedStaffId(firstStaffId);
+    }
+  }, [schedule?.staffs, selectedStaffId]);
+
+  useEffect(() => {
+    if (!schedule || !selectedStaffId) {
+      setEvents([]);
+      setHighlightedDates([]);
+      return;
+    }
+
+    const currentStaff = schedule.staffs?.find(
+      (staff) => staff.id === selectedStaffId
+    );
+    const offDays = currentStaff?.offDays || [];
+
+    const filteredAssignments =
+      schedule.assignments?.filter(
+        (assign) => assign.staffId === selectedStaffId
+      ) || [];
+
+    const works: EventInput[] = filteredAssignments.map((assignment) => {
+      const shift = schedule.shifts?.find(
+        (item) => item.id === assignment.shiftId
+      );
+      const startDate = dayjs.utc(assignment.shiftStart).toDate();
+      const endDate = dayjs.utc(assignment.shiftEnd).toDate();
+      const formattedDate = dayjs(startDate).format("YYYY-MM-DD");
+      const isValidDate = validDateSet.has(formattedDate);
+      const colors = getEventColors(assignment.staffId, assignment.shiftId);
+
+      return {
+        id: assignment.id,
+        title: shift?.name ?? "Vardiya",
+        start: startDate,
+        end: endDate,
+        allDay: false,
+        backgroundColor: colors.background,
+        borderColor: colors.border,
+        textColor: colors.text,
+        display: "block",
+        className: `event ${assignment.isUpdated ? "highlight" : ""} ${
+          !isValidDate ? "invalid-date" : ""
+        }`,
+        extendedProps: {
+          staffName: currentStaff?.name ?? "",
+          shiftName: shift?.name ?? "",
+          shiftRule: shift?.shiftRule ?? "",
+          rawStart: assignment.shiftStart,
+          rawEnd: assignment.shiftEnd,
+        },
+      };
     });
 
-    setHighlightedDates(highlightedDates);
+    const staffHighlightedDates = validDateList
+      .map((date) => dayjs(date, "YYYY-MM-DD"))
+      .filter((day) => offDays.includes(day.format("DD.MM.YYYY")))
+      .map((day) => day.format("DD-MM-YYYY"));
+
+    setHighlightedDates(staffHighlightedDates);
     setEvents(works);
+  }, [
+    getEventColors,
+    schedule,
+    selectedStaffId,
+    validDateList,
+    validDateSet,
+  ]);
+
+  const handleEventClick = (eventInfo: EventClickArg) => {
+    eventInfo.jsEvent?.preventDefault();
+    const { extendedProps } = eventInfo.event;
+
+    setActiveEventDetails({
+      id: eventInfo.event.id,
+      staffName: extendedProps.staffName ?? "",
+      shiftName: extendedProps.shiftName ?? eventInfo.event.title,
+      date: dayjs(eventInfo.event.start).format("DD.MM.YYYY"),
+      startTime: dayjs(eventInfo.event.start).format("HH:mm"),
+      endTime: dayjs(eventInfo.event.end ?? eventInfo.event.start).format(
+        "HH:mm"
+      ),
+      shiftRule: extendedProps.shiftRule,
+    });
   };
 
-  useEffect(() => {
-    const firstStaffId = schedule?.staffs?.[0]?.id;
-    setSelectedStaffId(firstStaffId);
-    generateStaffBasedCalendar();
-  }, [schedule]);
+  const closeEventModal = () => setActiveEventDetails(null);
 
-  useEffect(() => {
-    generateStaffBasedCalendar();
-  }, [selectedStaffId]);
-
-  const RenderEventContent = ({ eventInfo }: any) => {
+  const RenderEventContent = ({ eventInfo }: EventContentArg) => {
     return (
       <div className="event-content">
-        <p>{eventInfo.event.title}</p>
+        <p>
+          {eventInfo.event.start
+            ? `${dayjs(eventInfo.event.start).format("HH:mm")} · `
+            : ""}
+          {eventInfo.event.title}
+        </p>
+      </div>
+    );
+  };
+
+  const EventDetailModal = ({
+    eventDetails,
+    onClose,
+  }: {
+    eventDetails: CalendarEventDetails | null;
+    onClose: () => void;
+  }) => {
+    if (!eventDetails) return null;
+
+    return (
+      <div
+        className="calendar-modal-overlay"
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div
+          className="calendar-modal"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="calendar-modal__close"
+            onClick={onClose}
+            aria-label="close event details"
+          >
+            ×
+          </button>
+          <h3>{eventDetails.shiftName}</h3>
+          <div className="calendar-modal__info">
+            <p>
+              <strong>Personel:</strong> {eventDetails.staffName}
+            </p>
+            <p>
+              <strong>Tarih:</strong> {eventDetails.date}
+            </p>
+            <p>
+              <strong>Başlangıç:</strong> {eventDetails.startTime}
+            </p>
+            <p>
+              <strong>Bitiş:</strong> {eventDetails.endTime}
+            </p>
+            {eventDetails.shiftRule ? (
+              <p>
+                <strong>Kural:</strong> {eventDetails.shiftRule}
+              </p>
+            ) : null}
+          </div>
+        </div>
       </div>
     );
   };
@@ -187,9 +322,10 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           dayMaxEventRows={4}
           fixedWeekCount={true}
           showNonCurrentDates={true}
-          eventContent={(eventInfo: any) => (
+          eventContent={(eventInfo: EventContentArg) => (
             <RenderEventContent eventInfo={eventInfo} />
           )}
+          eventClick={handleEventClick}
           datesSet={(info: any) => {
             const prevButton = document.querySelector(
               ".fc-prev-button"
@@ -223,9 +359,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             else nextButton.disabled = false;
           }}
           dayCellContent={({ date }) => {
-            const found = validDates().includes(
-              dayjs(date).format("YYYY-MM-DD")
-            );
+            const found = validDateSet.has(dayjs(date).format("YYYY-MM-DD"));
             const isHighlighted = highlightedDates.includes(
               dayjs(date).format("DD-MM-YYYY")
             );
@@ -242,6 +376,10 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           }}
         />
       </div>
+      <EventDetailModal
+        eventDetails={activeEventDetails}
+        onClose={closeEventModal}
+      />
     </div>
   );
 };

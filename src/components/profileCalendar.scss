@@ -432,3 +432,58 @@
   content: "";
   border-bottom: 5px solid rgba(194, 6, 138, 0.5) !important;
 }
+
+.calendar-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.calendar-modal {
+  position: relative;
+  width: min(360px, 100%);
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px 20px 20px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.35);
+
+  h3 {
+    margin: 0 0 12px;
+    font-size: 18px;
+    color: #0f172a;
+  }
+
+  .calendar-modal__info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    p {
+      margin: 0;
+      font-size: 14px;
+      color: #475569;
+
+      strong {
+        color: #0f172a;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+.calendar-modal__close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+  color: #475569;
+  line-height: 1;
+}
