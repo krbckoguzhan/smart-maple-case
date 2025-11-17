@@ -21,6 +21,7 @@ import type {
   EventClickArg,
   EventContentArg,
   EventInput,
+  EventDropArg,
 } from "@fullcalendar/core/index.js";
 
 import "../profileCalendar.scss";
@@ -28,6 +29,9 @@ import "../profileCalendar.scss";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+
+import { updateAssignmentDate } from "../../store/schedule/actions";
+import { useAppDispatch } from "../../store/hooks";
 
 dayjs.extend(utc);
 dayjs.extend(isSameOrBefore);
@@ -60,6 +64,7 @@ type DayCellStyle = CSSProperties & {
 };
 
 const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
+  const dispatch = useAppDispatch();
   const calendarRef = useRef<FullCalendar>(null);
 
   const [events, setEvents] = useState<EventInput[]>([]);
@@ -263,6 +268,51 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     validDateSet,
   ]);
 
+  const handleEventDrop = useCallback(
+    (info: EventDropArg) => {
+      if (!info.event.start) {
+        info.revert();
+        return;
+      }
+
+      const assignment = schedule?.assignments?.find(
+        (item) => item.id === info.event.id
+      );
+
+      if (!assignment) {
+        info.revert();
+        return;
+      }
+
+      const dropDate = dayjs(info.event.start);
+      const dropDateIso = dropDate.format("YYYY-MM-DD");
+
+      if (!validDateSet.has(dropDateIso)) {
+        info.revert();
+        return;
+      }
+
+      const assignmentDuration = dayjs(assignment.shiftEnd).diff(
+        dayjs(assignment.shiftStart)
+      );
+
+      const newStart = dropDate.utc();
+      const computedEnd = info.event.end
+        ? dayjs(info.event.end)
+        : dropDate.add(assignmentDuration, "millisecond");
+      const newEnd = computedEnd.utc();
+
+      dispatch(
+        updateAssignmentDate({
+          assignmentId: assignment.id,
+          shiftStart: newStart.toISOString(),
+          shiftEnd: newEnd.toISOString(),
+        }) as any
+      );
+    },
+    [dispatch, schedule?.assignments, validDateSet]
+  );
+
   const handleEventClick = (eventInfo: EventClickArg) => {
     eventInfo.jsEvent?.preventDefault();
     const { extendedProps } = eventInfo.event;
@@ -397,6 +447,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             <RenderEventContent eventInfo={eventInfo} />
           )}
           eventClick={handleEventClick}
+          eventDrop={handleEventDrop}
           datesSet={(info: any) => {
             const prevButton = document.querySelector(
               ".fc-prev-button"

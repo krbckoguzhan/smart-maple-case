@@ -11,6 +11,11 @@ import { updateProgress } from '../ui/actions';
 
 import type { Callbacks } from '../../utils/types';
 import { scheduleReponse } from '../../constants/api';
+import type { ScheduleInstance } from '../../models/schedule';
+import {
+  loadScheduleFromStorage,
+  saveScheduleToStorage,
+} from '../../utils/scheduleStorage';
 
 function* asyncFetchSchedule({
   payload: { onSuccess, onError } = {},
@@ -19,8 +24,19 @@ function* asyncFetchSchedule({
 >) {
   yield put(updateProgress());
   try {
+    const storedSchedule = loadScheduleFromStorage();
+
+    if (storedSchedule) {
+      yield put(actions.fetchScheduleSuccess(storedSchedule));
+      onSuccess &&
+        onSuccess({ data: storedSchedule } as unknown as AxiosResponse);
+      return;
+    }
+
     const response = scheduleReponse;
-    yield put(actions.fetchScheduleSuccess(response.data));
+    const scheduleData = response.data as unknown as ScheduleInstance;
+    yield put(actions.fetchScheduleSuccess(scheduleData));
+    saveScheduleToStorage(scheduleData);
 
     onSuccess && onSuccess(response);
   } catch (err) {

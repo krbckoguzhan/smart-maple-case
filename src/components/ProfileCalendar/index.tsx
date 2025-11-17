@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { fetchSchedule } from "../../store/schedule/actions";
 import { setProfile } from "../../store/auth/actions";
+import { saveScheduleToStorage } from "../../utils/scheduleStorage";
 
 import "../profileCalendar.scss";
 
@@ -24,6 +25,12 @@ const ProfileCalendar = () => {
     dispatch(setProfile() as any);
     dispatch(fetchSchedule() as any);
   }, []);
+
+  useEffect(() => {
+    if (!schedule?.assignments?.length) return;
+
+    saveScheduleToStorage(schedule);
+  }, [schedule]);
 
   return (
     <div className="profile-calendar-container">
