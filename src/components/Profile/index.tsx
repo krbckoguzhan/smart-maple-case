@@ -9,6 +9,7 @@ type ProfileCardProps = {
 
 const ProfileCard = ({ profile }: ProfileCardProps) => {
   const role = profile?.role ?? AuthSession.getRoles();
+  const name = profile?.name ?? AuthSession.getName();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
@@ -40,7 +41,7 @@ const ProfileCard = ({ profile }: ProfileCardProps) => {
           }}
         />
         <div className="profile-details">
-          <h2>Welcome, {profile?.name}</h2>
+          <h2>Welcome, {name}</h2>
           <p>{profile?.email ?? AuthSession.getEmail()}</p>
           <p>{role?.name}</p>
         </div>
