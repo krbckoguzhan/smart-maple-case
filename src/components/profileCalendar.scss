@@ -429,8 +429,7 @@
 }
 
 .highlightedPair {
-  content: "";
-  border-bottom: 5px solid rgba(194, 6, 138, 0.5) !important;
+  border-bottom: 5px solid var(--pair-color, rgba(194, 6, 138, 0.5));
 }
 
 .calendar-modal-overlay {

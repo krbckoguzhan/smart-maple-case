@@ -1,8 +1,13 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 
 import type { ScheduleInstance } from "../../models/schedule";
 import type { UserInstance } from "../../models/user";
@@ -42,12 +47,25 @@ type CalendarEventDetails = {
   shiftRule?: string;
 };
 
+type PairHighlightInfo = {
+  staffId: string;
+  staffName: string;
+  color: string;
+};
+
+type PairHighlightMap = Record<string, PairHighlightInfo[]>;
+
+type DayCellStyle = CSSProperties & {
+  "--pair-color"?: string;
+};
+
 const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
   const calendarRef = useRef<FullCalendar>(null);
 
   const [events, setEvents] = useState<EventInput[]>([]);
   const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const [pairHighlightMap, setPairHighlightMap] = useState<PairHighlightMap>({});
   const [initialDate, setInitialDate] = useState<Date>(
     dayjs(schedule?.scheduleStartDate).toDate()
   );
@@ -105,6 +123,18 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     [getStringHash]
   );
 
+  const getStaffHighlightColor = useCallback(
+    (staffId: string) => {
+      const seed = getStringHash(staffId);
+      const hue = seed % 360;
+      const saturation = 70;
+      const lightness = 45 + (seed % 10);
+
+      return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    },
+    [getStringHash]
+  );
+
   const getPlugins = () => {
     const plugins = [dayGridPlugin];
 
@@ -135,6 +165,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     if (!schedule || !selectedStaffId) {
       setEvents([]);
       setHighlightedDates([]);
+      setPairHighlightMap({});
       return;
     }
 
@@ -186,10 +217,46 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       .filter((day) => offDays.includes(day.format("DD.MM.YYYY")))
       .map((day) => day.format("DD-MM-YYYY"));
 
+    const highlightedPairs: PairHighlightMap = {};
+
+    (currentStaff?.pairList ?? []).forEach((pair: any) => {
+      if (!pair?.startDate || !pair?.endDate || !pair?.staffId) return;
+
+      const start = dayjs(pair.startDate, "DD.MM.YYYY");
+      const end = dayjs(pair.endDate, "DD.MM.YYYY");
+
+      if (!start.isValid() || !end.isValid()) return;
+
+      const pairStaff = schedule.staffs?.find(
+        (staff) => staff.id === pair.staffId
+      );
+
+      let cursor = start;
+      const color = getStaffHighlightColor(pair.staffId);
+
+      while (cursor.isSame(end) || cursor.isBefore(end)) {
+        const isoDate = cursor.format("YYYY-MM-DD");
+
+        if (validDateSet.has(isoDate)) {
+          if (!highlightedPairs[isoDate]) highlightedPairs[isoDate] = [];
+
+          highlightedPairs[isoDate].push({
+            staffId: pair.staffId,
+            staffName: pairStaff?.name ?? "",
+            color,
+          });
+        }
+
+        cursor = cursor.add(1, "day");
+      }
+    });
+
     setHighlightedDates(staffHighlightedDates);
+    setPairHighlightMap(highlightedPairs);
     setEvents(works);
   }, [
     getEventColors,
+    getStaffHighlightColor,
     schedule,
     selectedStaffId,
     validDateList,
@@ -215,7 +282,11 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
 
   const closeEventModal = () => setActiveEventDetails(null);
 
-  const RenderEventContent = ({ eventInfo }: EventContentArg) => {
+  const RenderEventContent = ({
+    eventInfo,
+  }: {
+    eventInfo: EventContentArg;
+  }) => {
     return (
       <div className="event-content">
         <p>
@@ -359,16 +430,24 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             else nextButton.disabled = false;
           }}
           dayCellContent={({ date }) => {
-            const found = validDateSet.has(dayjs(date).format("YYYY-MM-DD"));
+            const isoDate = dayjs(date).format("YYYY-MM-DD");
+            const found = validDateSet.has(isoDate);
             const isHighlighted = highlightedDates.includes(
               dayjs(date).format("DD-MM-YYYY")
             );
+            const pairHighlightsForDay = pairHighlightMap[isoDate] ?? [];
+            const pairColor = pairHighlightsForDay[0]?.color;
+
+            const cellStyle: DayCellStyle | undefined = pairColor
+              ? { "--pair-color": pairColor }
+              : undefined;
 
             return (
               <div
                 className={`${found ? "" : "date-range-disabled"} ${
                   isHighlighted ? "highlighted-date-orange" : ""
-                } highlightedPair`}
+                } ${pairColor ? "highlightedPair" : ""}`}
+                style={cellStyle}
               >
                 {dayjs(date).date()}
               </div>
